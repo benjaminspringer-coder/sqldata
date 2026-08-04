@@ -1,0 +1,308 @@
+{
+  "title": "Corestats.pro API — Draft Extraction Guide for Google AI Studio",
+  "version": "1.0",
+  "generated_for": "Google AI Studio (Gemini)",
+  "tournament": "Brawl Stars Championship (BSC) 2026",
+  "month": "August 2026",
+  "data_source": "https://corestats.pro",
+
+  "overview": {
+    "description": "This document explains how to programmatically extract draft data (brawler bans, brawler picks, map names, team names, player names, scores, and round info) from the BSC 2026 August tournament brackets on corestats.pro.",
+    "scope": "The method works identically across all 4 regions (EMEA, NA, SA, EA) and both qualifier days (QD1, QD2) — 8 brackets total for August 2026.",
+    "data_included": ["brawler names", "bans", "picks", "map names", "game modes", "team names", "player names", "scores", "round info"],
+    "data_excluded": ["gadgets", "star powers", "hypercharges", "other loadout details"]
+  },
+
+  "prerequisites": [
+    "A browser session on https://corestats.pro (the API is protected by Cloudflare — direct curl or fetch from outside the browser may be blocked)",
+    "JavaScript execution capability (browser console, Puppeteer, Playwright, or similar)",
+    "The ability to make fetch() requests from within the corestats.pro page context"
+  ],
+
+  "brackets": {
+    "description": "All 8 brackets are for August 2026. Each has a unique UUID used in API calls.",
+    "list": [
+      { "region": "EMEA", "stage": "QD1", "uuid": "179c9838-85da-11f1-9e79-866f44b823f8" },
+      { "region": "EMEA", "stage": "QD2", "uuid": "17a116f6-85da-11f1-a974-866f44b823f8" },
+      { "region": "NA",   "stage": "QD1", "uuid": "179d807c-85da-11f1-8a27-866f44b823f8" },
+      { "region": "NA",   "stage": "QD2", "uuid": "17a1f6f2-85da-11f1-b594-866f44b823f8" },
+      { "region": "SA",   "stage": "QD1", "uuid": "179e748c-85da-11f1-9e17-866f44b823f8" },
+      { "region": "SA",   "stage": "QD2", "uuid": "17a2f304-85da-11f1-989e-866f44b823f8" },
+      { "region": "EA",   "stage": "QD1", "uuid": "179b8218-85da-11f1-8987-866f44b823f8" },
+      { "region": "EA",   "stage": "QD2", "uuid": "17a03bbe-85da-11f1-aa30-866f44b823f8" }
+    ],
+    "note": "You can also get these dynamically by calling the list endpoint (see below)."
+  },
+
+  "base_url": "https://corestats.pro",
+  "api_note": "All endpoints are called from within the corestats.pro page (same origin).",
+
+  "endpoints": [
+    {
+      "name": "List All Brackets",
+      "method": "GET",
+      "path": "/api/brackets/list",
+      "description": "Returns an array of all available brackets across all months, regions, and stages.",
+      "response_structure": {
+        "brackets": [
+          {
+            "download_url": "179c9838-85da-11f1-9e79-866f44b823f8",
+            "month": "August 2026",
+            "region": "EMEA",
+            "segment_name": "Europe, the Middle East and Africa",
+            "stageLabel": "QDay1",
+            "type": "QDay1"
+          }
+        ]
+      },
+      "field_notes": {
+        "download_url": "This is the bracket UUID. Use it in endpoint 2.",
+        "filtering": "Filter by month === 'August 2026' and stageLabel === 'QDay1' or 'QDay2' to get the 8 brackets."
+      },
+      "javascript_example": "const res = await fetch('/api/brackets/list');\nconst data = await res.json();\nconst augustBrackets = data.brackets.filter(b =>\n  b.month === 'August 2026' &&\n  (b.stageLabel === 'QDay1' || b.stageLabel === 'QDay2')\n);\n// augustBrackets now has 8 entries"
+    },
+    {
+      "name": "Get Bracket Structure (Match List)",
+      "method": "GET",
+      "path": "/api/brackets/data?url=<BRACKET_UUID>",
+      "description": "Returns the full bracket structure: all matches, rounds, teams, players, and scores.",
+      "response_structure": {
+        "success": true,
+        "from_cache": true,
+        "data": {
+          "group": [],
+          "match": [],
+          "month": "August 2026",
+          "participant": [],
+          "region": "EMEA",
+          "round": [],
+          "segment_name": "Europe, the Middle East and Africa",
+          "stage": "QDay1"
+        }
+      },
+      "key_field": "data.match — an array of all matches in the bracket.",
+      "match_object_structure": {
+        "id": "09c8647e-8d8e-11f1-b83e-6ec2cd6d57a1",
+        "number": 5,
+        "round_id": 1,
+        "format": "best_of_1",
+        "status": 4,
+        "group_id": 1,
+        "stage_id": 1,
+        "segment_id": 1,
+        "scheduled_at": null,
+        "child_count": 0,
+        "sets": [],
+        "opponent1": {
+          "name": "Voltaic",
+          "score": 1,
+          "seed": { "number": 128 },
+          "forfeit": false,
+          "is_bye": false,
+          "result": null,
+          "team_code": "VLC",
+          "players": ["VLC|GXBRO", "VLC|Dodi"],
+          "id": "...",
+          "img": null
+        },
+        "opponent2": {
+          "name": "ZOT",
+          "score": 2,
+          "seed": { "number": 897 },
+          "forfeit": false,
+          "is_bye": false,
+          "result": null,
+          "team_code": null,
+          "players": []
+        }
+      },
+      "important_fields": [
+        { "field": "match.id", "description": "The UUID used to fetch draft data (see endpoint 3)" },
+        { "field": "match.round_id", "description": "The round number (1-6 for QD1, 1-N for QD2)" },
+        { "field": "match.number", "description": "Match number within the bracket" },
+        { "field": "match.format", "description": "Labeled 'best_of_1' in the API, but matches are actually BO3 (best of 3)" },
+        { "field": "match.opponent1 / match.opponent2", "description": "Team names, scores, seeds, players, forfeit/bye status" }
+      ],
+      "javascript_example": "const bracketUuid = '179c9838-85da-11f1-9e79-866f44b823f8'; // EMEA QD1\nconst res = await fetch('/api/brackets/data?url=' + bracketUuid);\nconst data = await res.json();\nconst matches = data.data.match;\n\n// Extract all match IDs for draft fetching\nconst matchIds = matches.map(m => m.id);\n// EMEA QD1: ~1008 matches, SA QD1: ~496 matches\n\n// Get team info from bracket\nfor (const m of matches) {\n  const team1Name = m.opponent1 && m.opponent1.name;\n  const team2Name = m.opponent2 && m.opponent2.name;\n  const team1Score = m.opponent1 && m.opponent1.score;\n  const team2Score = m.opponent2 && m.opponent2.score;\n  const round = m.round_id;\n  const isBye = (m.opponent1 && m.opponent1.is_bye) || (m.opponent2 && m.opponent2.is_bye);\n  const isForfeit = (m.opponent1 && m.opponent1.forfeit) || (m.opponent2 && m.opponent2.forfeit);\n}"
+    },
+    {
+      "name": "Get Draft Data for a Single Match (Bans, Picks, Maps)",
+      "method": "GET",
+      "path": "/api/match/live/<MATCH_ID>",
+      "description": "This is the most important endpoint. It returns the full draft data for one match: bans, picks, maps, game modes, and per-game results.",
+      "critical_warning": "The data[] array contains MULTIPLE entries — one per map/mode played. A Best-of-3 match that went 2-1 will have 3 entries in data[]. If you only use data[0], you will miss the 2nd and 3rd games. You MUST iterate over ALL entries in data[].",
+      "response_structure": {
+        "success": true,
+        "data": [
+          {
+            "id": "a1fd56af-cedd-45fb-9bc1-cf1031f8a36d",
+            "phase": "ending",
+            "state": "finished",
+            "round": 2,
+            "competitors": [],
+            "teams": [
+              {
+                "side": 0,
+                "bans": [
+                  { "name": "CHUCK" },
+                  { "name": "BROCK" },
+                  { "name": "BOLT" }
+                ],
+                "players": [
+                  { "brawler": { "name": "MICO" } },
+                  { "brawler": { "name": "STARR NOVA" } },
+                  { "brawler": { "name": "PIERCE" } }
+                ]
+              },
+              {
+                "side": 1,
+                "bans": [
+                  { "name": "COLT" },
+                  { "name": "8-BIT" },
+                  { "name": "GUS" }
+                ],
+                "players": [
+                  { "brawler": { "name": "CROW" } },
+                  { "brawler": { "name": "PIPER" } },
+                  { "brawler": { "name": "SURGE" } }
+                ]
+              }
+            ],
+            "games": [
+              {
+                "location": {
+                  "name": "Safe Zone",
+                  "gameMode": "HEIST"
+                },
+                "teams": [
+                  {
+                    "isWinner": true,
+                    "score": 10,
+                    "players": [
+                      { "brawler": { "name": "STARR NOVA" } },
+                      { "brawler": { "name": "MICO" } },
+                      { "brawler": { "name": "PIERCE" } }
+                    ]
+                  },
+                  {
+                    "isWinner": false,
+                    "score": 0,
+                    "players": [
+                      { "brawler": { "name": "CROW" } },
+                      { "brawler": { "name": "PIPER" } },
+                      { "brawler": { "name": "SURGE" } }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "note": "Within each data[i], the games array has 2 entries that are exact duplicates of each other. Only use games[0].",
+      "key_data_paths": [
+        { "want": "Bans for team 1 (this map)", "path": "data[i].teams[0].bans[].name" },
+        { "want": "Bans for team 2 (this map)", "path": "data[i].teams[1].bans[].name" },
+        { "want": "Which team is team 1 vs team 2", "path": "data[i].teams[j].side (0 = team 1, 1 = team 2)" },
+        { "want": "Brawler picks (match-level, first map)", "path": "data[0].teams[j].players[].brawler.name" },
+        { "want": "Map name", "path": "data[i].games[0].location.name" },
+        { "want": "Game mode", "path": "data[i].games[0].location.gameMode" },
+        { "want": "Per-game brawler picks", "path": "data[i].games[0].teams[j].players[].brawler.name" },
+        { "want": "Who won this game", "path": "data[i].games[0].teams[j].isWinner" },
+        { "want": "In-game score", "path": "data[i].games[0].teams[j].score" },
+        { "want": "Team roster name", "path": "data[0].competitors[j].roster.name" },
+        { "want": "Team players (names)", "path": "data[0].competitors[j].players[].name" },
+        { "want": "Team seed", "path": "data[0].competitors[j].seed.number" },
+        { "want": "Match score", "path": "data[0].competitors[j].result.score" }
+      ],
+      "critical_gotchas": [
+        {
+          "issue": "data[] has multiple entries",
+          "explanation": "One per map/mode. Iterate ALL of them to get every game. Using only data[0] will miss games 2 and 3 in BO3 matches."
+        },
+        {
+          "issue": "games[0] and games[1] are identical duplicates",
+          "explanation": "Within each data[i], the games array has 2 entries that are exact copies of each other. Only use games[0]."
+        }
+      ],
+      "bans_note": "Bans are per-map — each data[i] entry has its own teams[].bans[]. Different maps in the same match will have different bans. This is correct behavior, not a bug."
+    }
+  ],
+
+  "extraction_code": {
+    "description": "Complete extraction functions that correctly handle all the gotchas. Run this in the browser console while on https://corestats.pro.",
+    "extractDraft_function": "function extractDraft(rawData, bracketMatchId) {\n  var result = {\n    bracket_match_id: bracketMatchId,\n    games: []\n  };\n\n  if (!rawData || !rawData.data || !rawData.data.length) {\n    return result; // bye, forfeit, or not played\n  }\n\n  // Get match-level info from data[0]\n  var m0 = rawData.data[0];\n  result.match_id = m0.id || null;\n  result.state = m0.state || null;\n\n  // Extract competitors (team names, players, scores)\n  result.competitors = [];\n  if (m0.competitors) {\n    for (var i = 0; i < m0.competitors.length; i++) {\n      var c = m0.competitors[i];\n      result.competitors.push({\n        number: c.number,\n        roster_name: c.roster ? c.roster.name : null,\n        seed: c.seed ? c.seed.number : null,\n        score: c.result ? c.result.score : null,\n        forfeit: c.result ? c.result.forfeit : false,\n        is_bye: c.isBye || false,\n        players: (c.players || []).map(function(p) { return p.name; })\n      });\n    }\n  }\n\n  // Process ALL data[] entries — one per map/mode\n  var gameNum = 0;\n  for (var di = 0; di < rawData.data.length; di++) {\n    var item = rawData.data[di];\n\n    // Extract per-map bans and picks from teams[]\n    var t1Bans = [], t2Bans = [], t1Picks = [], t2Picks = [];\n    if (item.teams) {\n      for (var ti = 0; ti < item.teams.length; ti++) {\n        var t = item.teams[ti];\n        var bans = (t.bans || []).map(function(b) { return b.name; });\n        var picks = (t.players || [])\n          .map(function(p) { return p.brawler ? p.brawler.name : null; })\n          .filter(function(n) { return n !== null; });\n\n        if (t.side === 0) {\n          t1Bans = bans; t1Picks = picks;\n        } else if (t.side === 1) {\n          t2Bans = bans; t2Picks = picks;\n        }\n      }\n    }\n\n    // Extract game info — only use games[0] (games[1] is a duplicate)\n    if (item.games && item.games.length > 0) {\n      var g = item.games[0];\n      var loc = g.location || {};\n      gameNum++;\n\n      var game = {\n        game_num: gameNum,\n        map_name: loc.name || null,\n        game_mode: loc.gameMode || null,\n        team1_bans: t1Bans,\n        team2_bans: t2Bans,\n        team1_picks: [],\n        team2_picks: [],\n        team1_won: false,\n        team2_won: false\n      };\n\n      // Per-game picks and winner from games[0].teams[]\n      if (g.teams) {\n        for (var gi = 0; gi < g.teams.length; gi++) {\n          var gt = g.teams[gi];\n          var picks = (gt.players || [])\n            .map(function(p) { return p.brawler ? p.brawler.name : null; })\n            .filter(function(n) { return n !== null; });\n\n          if (gi === 0) {\n            game.team1_picks = picks;\n            game.team1_won = gt.isWinner || false;\n          } else {\n            game.team2_picks = picks;\n            game.team2_won = gt.isWinner || false;\n          }\n        }\n      }\n\n      result.games.push(game);\n    }\n  }\n\n  return result;\n}",
+    "fetchMatchDraft_function": "async function fetchMatchDraft(matchId) {\n  const res = await fetch('/api/match/live/' + matchId);\n  const data = await res.json();\n  return extractDraft(data, matchId);\n}",
+    "fetchAllDrafts_function": "async function fetchAllDrafts(matchIds, batchSize, delayMs) {\n  var results = [];\n  var errors = [];\n\n  for (var i = 0; i < matchIds.length; i += batchSize) {\n    var batch = matchIds.slice(i, i + batchSize);\n    var promises = batch.map(function(mid) {\n      return fetchMatchDraft(mid).catch(function(e) {\n        errors.push({ id: mid, error: e.message });\n        return null;\n      });\n    });\n    var batchResults = await Promise.all(promises);\n    for (var j = 0; j < batchResults.length; j++) {\n      if (batchResults[j] !== null) results.push(batchResults[j]);\n    }\n    await new Promise(function(r) { setTimeout(r, delayMs); });\n  }\n\n  return { results: results, errors: errors, total: matchIds.length };\n}"
+  },
+
+  "full_workflow": {
+    "description": "Extract one complete bracket in 3 steps.",
+    "javascript_example": "// Step 1: Get the bracket UUID (or use the brackets table above)\nvar bracketUuid = '179c9838-85da-11f1-9e79-866f44b823f8'; // EMEA QD1\n\n// Step 2: Get all match IDs from the bracket\nvar bracketRes = await fetch('/api/brackets/data?url=' + bracketUuid);\nvar bracketData = await bracketRes.json();\nvar matches = bracketData.data.match;\nvar matchIds = matches.map(function(m) { return m.id; });\n\n// Step 3: Fetch draft data for all matches (batch of 30, 500ms delay)\nvar drafts = await fetchAllDrafts(matchIds, 30, 500);\n\nconsole.log('Results:', drafts.results.length);\nconsole.log('Errors:', drafts.errors.length);\nconsole.log('Total games:', drafts.results.reduce(function(sum, r) {\n  return sum + r.games.length;\n}, 0));"
+  },
+
+  "expected_match_counts": [
+    { "region": "EMEA", "stage": "QD1", "matches": "~1008", "note": "512 teams, 6 rounds (R1-R6)" },
+    { "region": "EMEA", "stage": "QD2", "matches": "varies", "note": "Second qualifier day" },
+    { "region": "NA",   "stage": "QD1", "matches": "varies", "note": "" },
+    { "region": "NA",   "stage": "QD2", "matches": "varies", "note": "" },
+    { "region": "SA",   "stage": "QD1", "matches": "~496",  "note": "Fewer teams than EMEA" },
+    { "region": "SA",   "stage": "QD2", "matches": "varies", "note": "" },
+    { "region": "EA",   "stage": "QD1", "matches": "varies", "note": "" },
+    { "region": "EA",   "stage": "QD2", "matches": "varies", "note": "" }
+  ],
+  "match_counts_note": "Not all matches have draft data. Matches that are byes (one team advances automatically) or forfeits will return empty data[] from /api/match/live/. These should be skipped or stored with empty games arrays.",
+
+  "game_modes_and_maps": {
+    "game_modes": ["HEIST", "KNOCKOUT", "BOUNTY", "GEM GRAB", "HOT ZONE", "BRAWL BALL"],
+    "maps_18_total": [
+      "Crystal Arcade", "Dry Season", "Dueling Beetles", "Gem Fort",
+      "Goldarm Gulch", "Hard Rock Mine", "Hideout", "Kaboom Canyon",
+      "Layer Cake", "New Horizons", "Open Business", "Out in the Open",
+      "Pinball Dreams", "Pinhole Punt", "Pit Stop", "Ring of Fire",
+      "Safe Zone", "Triple Dribble"
+    ],
+    "note": "All 4 regions use the same pool of game modes and maps."
+  },
+
+  "why_browser_required": {
+    "reason": "The corestats.pro API is protected by Cloudflare. Direct HTTP requests from outside the browser (e.g., Python requests, curl, Node.js fetch) will typically be blocked with a Cloudflare challenge page.",
+    "solution": "The browser session on corestats.pro has valid Cloudflare cookies. When you call fetch('/api/...') from within the page context (browser console, Puppeteer page.evaluate(), Playwright page.evaluate()), the request includes these cookies and bypasses the Cloudflare challenge.",
+    "playwright_example": "const { chromium } = require('playwright');\n\nconst browser = await chromium.launch({ headless: false });\nconst page = await browser.newPage();\nawait page.goto('https://corestats.pro/brackets?m=aug26&r=emea&s=qday1');\n\n// Wait for page to load and Cloudflare to pass\nawait page.waitForTimeout(5000);\n\n// Run extraction in page context\nconst drafts = await page.evaluate(async () => {\n  // ... paste the extractDraft and fetchAllDrafts functions here ...\n  const res = await fetch('/api/brackets/data?url=179c9838-85da-11f1-9e79-866f44b823f8');\n  const data = await res.json();\n  const matchIds = data.data.match.map(m => m.id);\n  return await fetchAllDrafts(matchIds, 30, 500);\n});\n\nconsole.log(drafts);"
+  },
+
+  "google_ai_studio_assessment": {
+    "can_implement": true,
+    "requirements": [
+      "Browser automation capability — Puppeteer, Playwright, or Selenium to navigate to corestats.pro and execute JavaScript in the page context. This is required to bypass Cloudflare.",
+      "The API documentation in this guide — the 3 endpoints, the JSON paths, and the two critical gotchas (multiple data[] entries and duplicate games[] entries).",
+      "The extraction JavaScript code — the extractDraft() and fetchAllDrafts() functions provided can be used directly or adapted."
+    ],
+    "cannot_do_directly": [
+      "Call the corestats.pro API from a server-side script without a browser (Cloudflare blocks it)",
+      "Access the API without first visiting the website in a real browser to get Cloudflare cookies"
+    ],
+    "can_do": [
+      "Parse the extracted JSON data (once extracted via browser)",
+      "Analyze draft patterns, ban rates, pick rates, win rates",
+      "Generate statistics and insights across all 8 brackets",
+      "Compare regions, stages, and rounds",
+      "Answer questions about specific matches, teams, or brawlers"
+    ]
+  },
+
+  "summary": {
+    "steps": [
+      { "step": 1, "endpoint": "GET /api/brackets/list", "result": "List of all brackets (filter for August QD1/QD2)" },
+      { "step": 2, "endpoint": "GET /api/brackets/data?url=<UUID>", "result": "Bracket structure with all match IDs, team names, scores" },
+      { "step": 3, "endpoint": "GET /api/match/live/<MATCH_ID>", "result": "Draft data: bans, picks, maps, game modes, winners" }
+    ],
+    "critical_reminders": [
+      "Iterate ALL entries in data[] (one per map) — not just data[0]",
+      "Only use games[0] from each data[i] (games[1] is a duplicate)",
+      "Bans are per-map (each data[i] has different bans)",
+      "Must run from within a browser session on corestats.pro (Cloudflare protection)",
+      "8 brackets total for August 2026: 4 regions (EMEA, NA, SA, EA) x 2 qualifier days (QD1, QD2)"
+    ]
+  }
+}
