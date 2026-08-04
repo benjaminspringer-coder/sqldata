@@ -1,0 +1,6 @@
+{
+  "name": "Cloud SQL Database",
+  "description": "Cloud SQL PostgreSQL database configuration and management app.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
